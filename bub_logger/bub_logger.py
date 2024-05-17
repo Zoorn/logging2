@@ -75,7 +75,7 @@ class BubLogger():
         # Find the configuration file with the correct extension
         config_file_with_ext = None
         for ext in ['json', 'yaml', 'yml']:
-            file_path = os.path.join("configs/",f'{config_file}.{ext}')
+            file_path = os.path.join(os.path.dirname(__file__),"configs/",f'{config_file}.{ext}')
             if os.path.exists(file_path):
                 config_file_with_ext = file_path
                 break
