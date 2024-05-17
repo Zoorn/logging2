@@ -16,9 +16,10 @@ def update_docstring(docstring):
         return func
     return decorator
 
-class BubLogger:
+class BubLogger():
     def __init__(self):
         self.loggers = {}
+        # check if the logger is configured, otherwise don't return any loggers
         self.configured = False
         self.queue = Queue()
         self.queue_listener = None
@@ -33,6 +34,8 @@ class BubLogger:
 
         # Update the docstring of the load_config method with available configuration files
         # self._update_docstring()
+
+        # initial parent class
 
     def _find_config_files(self, directory='.'):
         """Find all logging configuration files in the specified directory."""
@@ -54,7 +57,6 @@ class BubLogger:
         """
         for config in configs:
             self.load_config(*config)
-            self.apply_configs()
 
     def load_config(self, config_file, log_file_path=None, log_level= 'DEBUG', formatter = None):
         """ Load logging configuration from a file (JSON or YAML) and set log file path if provided and log level.
@@ -98,9 +100,9 @@ class BubLogger:
         # Update the log level if provided
         # set logger level to debug so that all messages are logged and then set the level of the handlers
         for logger in config.get('loggers', {}).values():
-                logger['level'] = 'DEBUG'
+                logger['level'] = logging.getLevelName('DEBUG')
         for handler in config.get('handlers', {}).values():
-            handler['level'] = log_level
+            handler['level'] = logging.getLevelName(log_level)
             
 
         # remove the config if it already exists to avoid duplicates and add the new config
@@ -108,6 +110,7 @@ class BubLogger:
             self.configs.remove(config)
 
         self.configs.append(config)
+        self.apply_configs()
 
     def merge_configs_and_get_handlers(self, *configs):
         """Merge multiple configurations together and apply them."""
@@ -147,21 +150,13 @@ class BubLogger:
         if 'queue' not in combined_config['handlers']:
             combined_config['handlers']['queue'] = {
                 'class': 'logging.handlers.QueueHandler',
-                'queue': self.queue
+                'queue': self.queue,
                 }
         return combined_config, actual_handlers
 
     def apply_configs(self):
         """Apply all loaded configurations."""
         combined_config, actual_handlers = self.merge_configs_and_get_handlers(*self.configs)
-
-
-        # combined_config['handlers']['queue'] = {
-        #     'class': 'logging.handlers.QueueHandler',
-        #     'queue': "ext://queue.Queue"
-        # }
-        # with open('combined_config.json', 'w') as file:
-        #     json.dump(combined_config, file, indent=4)
 
         logging.config.dictConfig(combined_config)
 
@@ -194,7 +189,7 @@ class BubLogger:
         if self.queue_listener:
             self.queue_listener.stop()
 
-        self.queue_listener = QueueListener(self.queue, *handler_instances)
+        self.queue_listener = QueueListener(self.queue, *handler_instances, respect_handler_level=True)
         self.queue_listener.start()
 
         self.configured = True
@@ -278,6 +273,7 @@ class BubLogger:
         """
         self.load_config = update_docstring(docstring)(self.load_config)
 
+
 bub_logger = BubLogger()
 
 if __name__ == '__main__':
@@ -285,9 +281,8 @@ if __name__ == '__main__':
     log_dir = os.path.join(os.path.dirname(os.path.dirname(__file__)), 'logs')
     os.makedirs(log_dir, exist_ok=True)
     log_file_path = os.path.join(log_dir, 'test.log')
-    bub_logger.load_configs([['logging_file', log_file_path, 'DEBUG', None], ['logging_console', None, 'INFO', None]])
-    # bub_logger.load_config('logging_file', log_file_path=log_file_path, log_level='ERROR')
-    # bub_logger.load_config('logging_console', log_level='INFO')
+    bub_logger.load_config('logging_file', log_file_path=log_file_path, log_level='CRITICAL')
+    bub_logger.load_config('logging_console', log_level='CRITICAL')
     logger = bub_logger.get_logger(__name__)
     logger.debug('Test debug message')
     logger.info('Test info message')
