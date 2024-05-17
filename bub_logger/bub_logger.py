@@ -28,6 +28,9 @@ class BubLogger:
         # register the stop method to be called on exit
         atexit.register(self.stop)
 
+        # Set the global exception handler
+        sys.excepthook = self.log_uncaught_exceptions
+
         # Update the docstring of the load_config method with available configuration files
         # self._update_docstring()
 
@@ -39,7 +42,21 @@ class BubLogger:
                 config_files.append(os.path.splitext(file)[0])
         return config_files
 
-    def load_config(self, config_file, log_file_path=None, log_level= 'DEBUG'):
+    def load_configs(self, configs: list[list] = [['logging_console', None, 'DEBUG', None]]):
+        """Load multiple logging configurations from a list of configurations.
+
+        Args:
+            configs (list[list], optional): List of configurations to load. Each configuration is a list with the following elements:
+                - config_file (str): Name of the configuration file to load (without extension).
+                - log_file_path (str, optional): Custom path for log files if specified. Defaults to None.
+                - log_level (str, optional): Log level to set. Defaults to 'DEBUG'.
+                - formatter (str, optional): Formatter to use. Defaults to None.
+        """
+        for config in configs:
+            self.load_config(*config)
+            self.apply_configs()
+
+    def load_config(self, config_file, log_file_path=None, log_level= 'DEBUG', formatter = None):
         """ Load logging configuration from a file (JSON or YAML) and set log file path if provided and log level.
 
             Available configuration files:
@@ -53,16 +70,12 @@ class BubLogger:
                 FileNotFoundError: If the specified configuration file is not found.
                 ValueError: If the configuration file has an invalid format.
         """
-        # Create the log file path if it doesn't exist
-        if log_file_path:
-            log_dir = os.path.dirname(log_file_path)
-            if not os.path.exists(log_dir):
-                os.makedirs(log_dir, exist_ok=True)
         # Find the configuration file with the correct extension
         config_file_with_ext = None
         for ext in ['json', 'yaml', 'yml']:
-            if os.path.exists(f'{config_file}.{ext}'):
-                config_file_with_ext = f'{config_file}.{ext}'
+            file_path = os.path.join("configs/",f'{config_file}.{ext}')
+            if os.path.exists(file_path):
+                config_file_with_ext = file_path
                 break
         
         if not config_file_with_ext:
@@ -83,87 +96,108 @@ class BubLogger:
                     handler['filename'] = log_file_path
         
         # Update the log level if provided
-        if log_level:
-            for logger in config.get('loggers', {}).values():
-                logger['level'] = log_level
+        # set logger level to debug so that all messages are logged and then set the level of the handlers
+        for logger in config.get('loggers', {}).values():
+                logger['level'] = 'DEBUG'
+        for handler in config.get('handlers', {}).values():
+            handler['level'] = log_level
+            
+
+        # remove the config if it already exists to avoid duplicates and add the new config
+        if config in self.configs:
+            self.configs.remove(config)
 
         self.configs.append(config)
-        self.apply_configs()
+
+    def merge_configs_and_get_handlers(self, *configs):
+        """Merge multiple configurations together and apply them."""
+        # empty config to start with
+        combined_config = {'version': 1, 'disable_existing_loggers': False, 'formatters': {}, 'handlers': {}, 'loggers': {}}
+        # list of actual handlers to add to the queue listener
+        actual_handlers = []
+
+        for config in configs:
+            # add all formatters to the combined config
+            for formatter_name, formatter_config in config.get('formatters', {}).items():
+                if formatter_name not in combined_config['formatters']:
+                    combined_config['formatters'][formatter_name] = formatter_config
+                else:
+                    # merge the two formatter configs
+                    combined_config['formatters'][formatter_name].update(formatter_config)
+            combined_config['formatters'].update(config.get('formatters', {}))
+
+            # Extract actual handlers and remove them from the config
+            for handler_name, handler_config in list(config.get('handlers', {}).items()):
+                if handler_config['class'] != 'logging.handlers.QueueHandler':
+                    actual_handlers.append((handler_name, handler_config))
+                else:
+                    combined_config['handlers'][handler_name] = handler_config
+
+        # Update loggers, but make sure they only use the QueueHandler
+        for logger_name, logger_config in config.get('loggers', {}).items():
+            if logger_name not in combined_config['loggers']:
+                combined_config['loggers'][logger_name] = logger_config
+            else:
+                combined_config['loggers'][logger_name]['handlers'].extend(logger_config['handlers'])
+                combined_config['loggers'][logger_name]['handlers'] = list(set(combined_config['loggers'][logger_name]['handlers']))
+            combined_config['loggers'][logger_name]['handlers'] = ['queue']
+            combined_config['loggers'][logger_name]['level'] = min(combined_config['loggers'][logger_name]['level'], logger_config['level'])
+            
+        # Add the QueueHandler with the actual queue
+        if 'queue' not in combined_config['handlers']:
+            combined_config['handlers']['queue'] = {
+                'class': 'logging.handlers.QueueHandler',
+                'queue': self.queue
+                }
+        return combined_config, actual_handlers
 
     def apply_configs(self):
-            """Apply all loaded configurations."""
-            # empty config to start with
-            combined_config = {'version': 1, 'disable_existing_loggers': False, 'formatters': {}, 'handlers': {}, 'loggers': {}}
-            # list of actual handlers to add to the queue listener
-            actual_handlers = []
+        """Apply all loaded configurations."""
+        combined_config, actual_handlers = self.merge_configs_and_get_handlers(*self.configs)
 
-            for config in self.configs:
-                # add all formatters to the combined config
-                combined_config['formatters'].update(config.get('formatters', {}))
-                # Extract actual handlers and remove them from the config
-                for handler_name, handler_config in list(config.get('handlers', {}).items()):
-                    if handler_config['class'] != 'logging.handlers.QueueHandler':
-                        actual_handlers.append((handler_name, handler_config))
-                        del config['handlers'][handler_name]
-                    else:
-                        combined_config['handlers'][handler_name] = handler_config
 
-            # Update loggers, but make sure they only use the QueueHandler
-            for logger_name, logger_config in config.get('loggers', {}).items():
-                if logger_name not in combined_config['loggers']:
-                    combined_config['loggers'][logger_name] = logger_config
-                else:
-                    combined_config['loggers'][logger_name]['handlers'].extend(logger_config['handlers'])
-                    combined_config['loggers'][logger_name]['handlers'] = list(set(combined_config['loggers'][logger_name]['handlers']))
-                combined_config['loggers'][logger_name]['handlers'] = ['queue']
-                combined_config['loggers'][logger_name]['level'] = min(combined_config['loggers'][logger_name]['level'], logger_config['level'])
-                
-                
-            # Add the QueueHandler with the actual queue
-            if 'queue' not in combined_config['handlers']:
-                combined_config['handlers']['queue'] = {
-                    'class': 'logging.handlers.QueueHandler',
-                    'queue': self.queue
-                    }
+        # combined_config['handlers']['queue'] = {
+        #     'class': 'logging.handlers.QueueHandler',
+        #     'queue': "ext://queue.Queue"
+        # }
+        # with open('combined_config.json', 'w') as file:
+        #     json.dump(combined_config, file, indent=4)
 
-            logging.config.dictConfig(combined_config)
+        logging.config.dictConfig(combined_config)
 
-            # Create actual handler instances and start the QueueListener
-            handler_instances = []
-            for handler_name, handler_config in actual_handlers:
-                handler_class_name = handler_config['class'].split('.')[-1]
-                if handler_class_name == 'StreamHandler':
-                    handler_class = logging.StreamHandler
-                elif handler_class_name == 'RotatingFileHandler':
-                    handler_class = RotatingFileHandler
-                else:
-                    raise ValueError(f"Unknown handler class: {handler_class_name}")
-                
-                handler_instance = handler_class(**{k: v for k, v in handler_config.items() if k not in ['class', 'formatter', 'level']})
+        # Create actual handler instances and start the QueueListener
+        handler_instances = []
+        for handler_name, handler_config in actual_handlers:
+            handler_class_name = handler_config['class'].split('.')[-1]
+            if handler_class_name == 'StreamHandler':
+                handler_class = logging.StreamHandler
+            elif handler_class_name == 'RotatingFileHandler':
+                handler_class = RotatingFileHandler
+            else:
+                raise ValueError(f"Unknown handler class: {handler_class_name}")
+            
+            handler_instance = handler_class(**{k: v for k, v in handler_config.items() if k not in ['class', 'formatter', 'level']})
 
-                # Set the formatter if specified
-                if 'formatter' in handler_config:
-                    formatter_name = handler_config['formatter']
-                    formatter_config = combined_config['formatters'][formatter_name]
-                    formatter = logging.Formatter(formatter_config['format'])
-                    handler_instance.setFormatter(formatter)
-                
-                # Set the level if specified
-                if 'level' in handler_config:
-                    handler_instance.setLevel(handler_config['level'])
+            # Set the formatter if specified
+            if 'formatter' in handler_config:
+                formatter_name = handler_config['formatter']
+                formatter_config = combined_config['formatters'][formatter_name]
+                formatter = logging.Formatter(formatter_config['format'])
+                handler_instance.setFormatter(formatter)
+            
+            # Set the level if specified
+            if 'level' in handler_config:
+                handler_instance.setLevel(handler_config['level'])
 
-                handler_instances.append(handler_instance)
+            handler_instances.append(handler_instance)
 
-            if self.queue_listener:
-                self.queue_listener.stop()
+        if self.queue_listener:
+            self.queue_listener.stop()
 
-            self.queue_listener = QueueListener(self.queue, *handler_instances)
-            self.queue_listener.start()
+        self.queue_listener = QueueListener(self.queue, *handler_instances)
+        self.queue_listener.start()
 
-            self.configured = True
-
-            # Set the global exception handler
-            sys.excepthook = self.log_uncaught_exceptions
+        self.configured = True
 
     def remove_config(self, config_file):
         """
@@ -249,9 +283,11 @@ bub_logger = BubLogger()
 if __name__ == '__main__':
     __name__ = 'bub_logger'
     log_dir = os.path.join(os.path.dirname(os.path.dirname(__file__)), 'logs')
+    os.makedirs(log_dir, exist_ok=True)
     log_file_path = os.path.join(log_dir, 'test.log')
-    bub_logger.load_config('logging_console', log_level='INFO')
-    bub_logger.load_config('logging_file', log_file_path=log_file_path, log_level='ERROR')
+    bub_logger.load_configs([['logging_file', log_file_path, 'DEBUG', None], ['logging_console', None, 'INFO', None]])
+    # bub_logger.load_config('logging_file', log_file_path=log_file_path, log_level='ERROR')
+    # bub_logger.load_config('logging_console', log_level='INFO')
     logger = bub_logger.get_logger(__name__)
     logger.debug('Test debug message')
     logger.info('Test info message')
@@ -259,4 +295,4 @@ if __name__ == '__main__':
     logger.error('Test error message')
     logger.critical('Test critical message')
     logger.error('error two')
-    print('Logging test successful')
+    raise ValueError('Test exception')
