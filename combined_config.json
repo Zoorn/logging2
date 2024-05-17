@@ -1,0 +1,25 @@
+{
+    "version": 1,
+    "disable_existing_loggers": false,
+    "formatters": {
+        "standard": {
+            "format": "%(asctime)s [%(levelname)-10s/%(name)-40s]-- %(message)s"
+        }
+    },
+    "handlers": {
+        "queue": {
+            "class": "logging.handlers.QueueHandler",
+            "queue": []
+        }
+    },
+    "loggers": {
+        "": {
+            "handlers": [
+                "queue",
+                "console"
+            ],
+            "level": "ERROR",
+            "propagate": true
+        }
+    }
+}

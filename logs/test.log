@@ -1,0 +1,9 @@
+2024-05-17 16:39:41,726 [DEBUG     /bub_logger                              ]-- Test debug message
+2024-05-17 16:39:41,726 [INFO      /bub_logger                              ]-- Test info message
+2024-05-17 16:39:41,726 [WARNING   /bub_logger                              ]-- Test warning message
+2024-05-17 16:39:41,726 [ERROR     /bub_logger                              ]-- Test error message
+2024-05-17 16:39:41,726 [CRITICAL  /bub_logger                              ]-- Test critical message
+2024-05-17 16:39:41,727 [ERROR     /bub_logger                              ]-- error two
+2024-05-17 16:39:56,999 [ERROR     /bub_logger                              ]-- Test error message
+2024-05-17 16:39:56,999 [CRITICAL  /bub_logger                              ]-- Test critical message
+2024-05-17 16:39:56,999 [ERROR     /bub_logger                              ]-- error two
