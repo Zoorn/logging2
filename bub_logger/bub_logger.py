@@ -230,10 +230,11 @@ class BubLogger():
         else:
             raise FileNotFoundError(f"Config file {config_file} not found in loaded configs.")
 
-    def get_logger(self, name):
+    def get_logger(self, name) -> logging.Logger:
         """Get a logger by name, initializing if not already configured."""
         if not self.configured:
-            raise RuntimeError("Logging not configured. Please load a config file first.")
+            # log to console if not configured
+            logging.basicConfig()
         
         if name not in self.loggers:
             self.loggers[name] = logging.getLogger(name)
@@ -272,6 +273,13 @@ class BubLogger():
             ValueError: If the configuration file has an invalid format.
         """
         self.load_config = update_docstring(docstring)(self.load_config)
+
+    @classmethod
+    def get_instance(cls, config_file=None, log_file_path=None, log_level='DEBUG'):
+        instance = cls()
+        if config_file:
+            instance.load_config(config_file, log_file_path=log_file_path, log_level=log_level)
+        return instance
 
 
 bub_logger = BubLogger()
