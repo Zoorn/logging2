@@ -1,12 +1,19 @@
-# internal_logger
+# BuB_logger
 
-A flexible and extendable logging module for Python.
+A flexible and extendable logging module for Python. Its adds all logging handlers into a queue and allow to load multiply defined logging configs.
+So you only need to import the module and load all config you want.
 
 ## Installation
 
 ```bash
 pip install git+https://gitea.bub-group.com/woelte/logging.git
+or
+pip install git+https://github.com/zoorn/logging2
 ```
+
+## create a new config
+
+It's important that in each config file every handler, formatter have his own Name. Otherwise the the last one called will overwrite the other one.
 
 ## Use the modul
 
