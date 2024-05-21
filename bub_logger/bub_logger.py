@@ -157,7 +157,7 @@ class BubLogger:
             if self.queue_listener:
                 self.queue_listener.stop()
 
-            self.queue_listener = QueueListener(self.queue, *handler_instances)
+            self.queue_listener = QueueListener(self.queue, *handler_instances, respect_handler_level=True)
             self.queue_listener.start()
 
             self.configured = True
