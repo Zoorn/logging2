@@ -4,7 +4,6 @@ import os
 import json
 import yaml
 import sys
-import traceback
 from logging.handlers import RotatingFileHandler, QueueHandler, QueueListener
 from queue import Queue
 import atexit
@@ -243,12 +242,19 @@ class BubLogger():
 
     def log_uncaught_exceptions(self, exc_type, exc_value, exc_traceback):
         """Log uncaught exceptions with traceback."""
+        import traceback
+        lines = traceback.format_exception(exc_type, exc_value, exc_traceback)
         logger = self.get_logger('uncaught_exceptions')
         if issubclass(exc_type, KeyboardInterrupt):
             # Allow KeyboardInterrupt to exit silently
             sys.__excepthook__(exc_type, exc_value, exc_traceback)
             return
-        logger.critical("Uncaught exception", exc_info=(exc_type, exc_value, exc_traceback))
+        logger.critical(u'---------------------Traceback lines-----------------------')
+        logger.critical(u'\n'.join(lines))
+        logger.critical(u'---------------------End of Traceback-----------------------')
+
+        sys.__excepthook__(exc_type, exc_value, exc_traceback)
+        sys.exit(1)
 
     def stop(self):
         """Stop the queue listener."""
