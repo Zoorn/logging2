@@ -234,7 +234,7 @@ class BubLogger():
         """Get a logger by name, initializing if not already configured."""
         if not self.configured:
             # log to console if not configured
-            logging.basicConfig()
+            self.load_config('logging_console', log_level='DEBUG')
         
         if name not in self.loggers:
             self.loggers[name] = logging.getLogger(name)
