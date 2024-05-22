@@ -16,6 +16,11 @@ def update_docstring(docstring):
         return func
     return decorator
 
+def resource_path(relative_path):
+    """ Get absolute path to resource, works for dev and for PyInstaller """
+    base_path = getattr(sys, '_MEIPASS', os.path.dirname(os.path.abspath(__file__)))
+    return os.path.join(base_path, relative_path)
+
 class BubLogger():
     def __init__(self):
         self.loggers = {}
@@ -75,7 +80,7 @@ class BubLogger():
         # Find the configuration file with the correct extension
         config_file_with_ext = None
         for ext in ['json', 'yaml', 'yml']:
-            file_path = os.path.join(os.path.dirname(__file__),"configs/",f'{config_file}.{ext}')
+            file_path = resource_path(os.path.join("configs/",f'{config_file}.{ext}'))
             if os.path.exists(file_path):
                 config_file_with_ext = file_path
                 break
