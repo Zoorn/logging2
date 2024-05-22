@@ -31,10 +31,18 @@ def manage_virtualenv():
         activate_script = os.path.join(venv_dir, "bin", "python")
 
     def run_in_venv(command):
-        subprocess.run(f"{activate_script} && {command}", shell=True, check=True)
+        complete_command = f"{activate_script} -m {command}"
+        subprocess.run(complete_command, shell=True, check=True)
 
     # Installiere das Modul
-    run_in_venv("pip install git+https://gitea.bub-group.com/woelte/logging.git@main")
+    
+    project_root = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
+    command = f"pip install -e {project_root}"
+    run_in_venv(command)
+
+    # move egg-info to tests venv
+    egg_info = os.path.join(project_root, "bub_logger.egg-info")
+    shutil.move(egg_info, os.path.join(venv_dir, "bub_logger.egg-info"))
 
     from bub_logger import BubLogger
 
