@@ -45,7 +45,7 @@ class BubLogger():
                 config_files.append(os.path.splitext(file)[0])
         return config_files
 
-    def load_configs(self, configs: List[List[str, str, str, str]] = [['logging_console', None, 'DEBUG', None]]):
+    def load_configs(self, configs: List[List[str]] = [['logging_console', None, 'DEBUG', None]]):
         """Load multiple logging configurations from a list of configurations.
 
         Args:
