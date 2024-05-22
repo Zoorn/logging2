@@ -8,6 +8,7 @@ from logging.handlers import RotatingFileHandler, QueueHandler, QueueListener
 from queue import Queue
 import atexit
 from typing import List
+import importlib.resources as pkg_resources
 
 def update_docstring(docstring):
     """Decorator to update the docstring of a function."""
@@ -15,11 +16,6 @@ def update_docstring(docstring):
         func.__doc__ = docstring
         return func
     return decorator
-
-def resource_path(relative_path):
-    """ Get absolute path to resource, works for dev and for PyInstaller """
-    base_path = getattr(sys, '_MEIPASS', os.path.dirname(os.path.abspath(__file__)))
-    return os.path.join(base_path, relative_path)
 
 class BubLogger():
     def __init__(self):
@@ -80,10 +76,10 @@ class BubLogger():
         # Find the configuration file with the correct extension
         config_file_with_ext = None
         for ext in ['json', 'yaml', 'yml']:
-            file_path = resource_path(os.path.join("configs/",f'{config_file}.{ext}'))
-            if os.path.exists(file_path):
-                config_file_with_ext = file_path
-                break
+            with pkg_resources.path(__package__, f'configs/{config_file}.{ext}') as file_path:
+                if file_path.exists():
+                    config_file_with_ext = file_path
+                    break
         
         if not config_file_with_ext:
             raise FileNotFoundError(f'Configuration file {config_file} not found.')

@@ -5,6 +5,9 @@ setup(
     version='0.0.1',
     packages=find_packages(),
     include_package_data=True,
+    long_description=open('README.md').read(),
+    long_description_content_type='text/markdown',
+    description='A flexible and extendable logging module',
     install_requires=[
         'PyYAML',  # Für YAML-Unterstützung
     ],
@@ -25,4 +28,5 @@ setup(
         'License :: OSI Approved :: MIT License',
         'Operating System :: OS Independent',
     ],
+    python_requires='>=3.7',
 )
