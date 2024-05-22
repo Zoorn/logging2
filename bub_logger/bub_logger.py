@@ -5,6 +5,7 @@ import json
 import yaml
 import sys
 from logging.handlers import RotatingFileHandler, QueueHandler, QueueListener
+from logging import FileHandler
 from queue import Queue
 import atexit
 from typing import List
@@ -74,23 +75,22 @@ class BubLogger():
                 ValueError: If the configuration file has an invalid format.
         """
         # Find the configuration file with the correct extension
-        config_file_with_ext = None
+        config_data = None
         for ext in ['json', 'yaml', 'yml']:
-            with pkg_resources.path(__package__, f'configs/{config_file}.{ext}') as file_path:
-                if file_path.exists():
-                    config_file_with_ext = file_path
+            try:
+                config_file_path = pkg_resources.files('bub_logger.configs').joinpath(f'{config_file}.{ext}')
+                with config_file_path.open('r') as file:
+                    config_data = file.read()
+                    if ext == 'json':
+                        config = json.loads(config_data)
+                    else:
+                        config = yaml.safe_load(config_data)
                     break
+            except FileNotFoundError:
+                continue
         
-        if not config_file_with_ext:
+        if config_data is None:
             raise FileNotFoundError(f'Configuration file {config_file} not found.')
-        
-        with open(config_file_with_ext, 'r') as file:
-            if config_file_with_ext.endswith('.json'):
-                config = json.load(file)
-            elif config_file_with_ext.endswith('.yaml') or config_file_with_ext.endswith('.yml'):
-                config = yaml.safe_load(file)
-            else:
-                raise ValueError('Invalid configuration file format.')
         
         # Update the log file path if provided
         if log_file_path:
@@ -169,6 +169,8 @@ class BubLogger():
                 handler_class = logging.StreamHandler
             elif handler_class_name == 'RotatingFileHandler':
                 handler_class = RotatingFileHandler
+            elif handler_class_name == 'FileHandler':
+                handler_class = FileHandler
             else:
                 raise ValueError(f"Unknown handler class: {handler_class_name}")
             
@@ -291,19 +293,3 @@ class BubLogger():
 
 
 bub_logger = BubLogger()
-
-if __name__ == '__main__':
-    __name__ = 'bub_logger'
-    log_dir = os.path.join(os.path.dirname(os.path.dirname(__file__)), 'logs')
-    os.makedirs(log_dir, exist_ok=True)
-    log_file_path = os.path.join(log_dir, 'test.log')
-    bub_logger.load_config('logging_file', log_file_path=log_file_path, log_level='CRITICAL')
-    bub_logger.load_config('logging_console', log_level='CRITICAL')
-    logger = bub_logger.get_logger(__name__)
-    logger.debug('Test debug message')
-    logger.info('Test info message')
-    logger.warning('Test warning message')
-    logger.error('Test error message')
-    logger.critical('Test critical message')
-    logger.error('error two')
-    raise ValueError('Test exception')
