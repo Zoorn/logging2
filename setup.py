@@ -19,7 +19,6 @@ setup(
     package_data={
         '': ['*.json', '*.yaml'],
     },
-    description='A flexible and extendable logging module',
     author='Robert Woelte',
     author_email='woelte@bub-group.com',
     url='https://gitea.bub-group.com/woelte/logging',
