@@ -7,6 +7,7 @@ import sys
 from logging.handlers import RotatingFileHandler, QueueHandler, QueueListener
 from queue import Queue
 import atexit
+from typing import List
 
 def update_docstring(docstring):
     """Decorator to update the docstring of a function."""
@@ -26,7 +27,7 @@ class BubLogger():
         self.config_files = self._find_config_files()
 
         # register the stop method to be called on exit
-        atexit.register(self.stop)
+        atexit.register(self._stop)
 
         # Set the global exception handler
         sys.excepthook = self.log_uncaught_exceptions
@@ -44,7 +45,7 @@ class BubLogger():
                 config_files.append(os.path.splitext(file)[0])
         return config_files
 
-    def load_configs(self, configs: list[list] = [['logging_console', None, 'DEBUG', None]]):
+    def load_configs(self, configs: List[List[str, str, str, str]] = [['logging_console', None, 'DEBUG', None]]):
         """Load multiple logging configurations from a list of configurations.
 
         Args:
@@ -256,7 +257,7 @@ class BubLogger():
         sys.__excepthook__(exc_type, exc_value, exc_traceback)
         sys.exit(1)
 
-    def stop(self):
+    def _stop(self):
         """Stop the queue listener."""
         if self.queue_listener:
             self.queue_listener.stop()
@@ -281,10 +282,10 @@ class BubLogger():
         self.load_config = update_docstring(docstring)(self.load_config)
 
     @classmethod
-    def get_instance(cls, config_file=None, log_file_path=None, log_level='DEBUG'):
+    def get_instance(cls, config_file=None, log_file_path=None, log_level='DEBUG', formatter=None):
         instance = cls()
         if config_file:
-            instance.load_config(config_file, log_file_path=log_file_path, log_level=log_level)
+            instance.load_config(config_file, log_file_path=log_file_path, log_level=log_level, formatter=formatter)
         return instance
 
 
