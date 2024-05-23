@@ -17,7 +17,7 @@ setup(
         ],
     },
     package_data={
-        "": ["*.json", "*.yaml"],
+        "bub_logger": ["configs/*"],
     },
     author="Robert Woelte",
     author_email="woelte@bub-group.com",
