@@ -89,7 +89,10 @@ class BubLogger:
         config_data = None
         for ext in ["json", "yaml", "yml"]:
             try:
-                config_file_path = pkg_resources.files("bub_logger.configs").joinpath(
+                if hasattr(sys, "_MEIPASS"):
+                    config_file_path = os.path.join(sys._MEIPASS, "configs", f"{config_file}.{ext}")
+                else:
+                    config_file_path = pkg_resources.files("bub_logger.configs").joinpath(
                     f"{config_file}.{ext}"
                 )
                 with config_file_path.open("r") as file:

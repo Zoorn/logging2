@@ -5,7 +5,7 @@
       "name": "Python: Main",
       "type": "debugpy",
       "request": "launch",
-      "program": "./bub_logger/bub_logger.py",
+      "program": "./bub_logger.py",
       "console": "integratedTerminal"
     }
   ]
