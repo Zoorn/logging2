@@ -5,31 +5,25 @@ test_config_data = {
     "version": 1,
     "disable_existing_loggers": False,
     "formatters": {
-        "standard": {
-            "format": "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
-        }
+        "standard": {"format": "%(asctime)s - %(name)s - %(levelname)s - %(message)s"}
     },
     "handlers": {
         "console": {
             "class": "logging.StreamHandler",
             "level": "DEBUG",
             "formatter": "standard",
-            "stream": "ext://sys.stdout"
+            "stream": "ext://sys.stdout",
         },
         "file": {
             "class": "logging.FileHandler",
             "level": "DEBUG",
             "formatter": "standard",
-            "filename": "test.log"
-        }
+            "filename": "test.log",
+        },
     },
     "loggers": {
-        "": {
-            "handlers": ["console", "file"],
-            "level": "DEBUG",
-            "propagate": True
-        }
-    }
+        "": {"handlers": ["console", "file"], "level": "DEBUG", "propagate": True}
+    },
 }
 
 # Konfigurationsdaten in JSON-Format umwandeln

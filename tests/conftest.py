@@ -1,27 +1,29 @@
-import pytest
 import os
-from unittest import mock
-from bub_logger.bub_logger import BubLogger
-import subprocess
 import shutil
+import subprocess
+from unittest import mock
+
+import pytest
+
+from bub_logger.bub_logger import BubLogger
 
 
-
-
-@pytest.fixture(scope='session', autouse=True)
+@pytest.fixture(scope="session", autouse=True)
 def setup_bub_logger():
     """Fixture to setup BubLogger."""
     logger = BubLogger()
     yield logger
 
+
 @pytest.fixture
 def logger_instance(setup_bub_logger):
     """Fixture to provide a configured BubLogger instance."""
     return setup_bub_logger
-    
+
+
 @pytest.fixture(scope="session")
 def manage_virtualenv():
-    venv_dir = os.path.join("tests",".venv_test")
+    venv_dir = os.path.join("tests", ".venv_test")
 
     subprocess.run(["python", "-m", "venv", venv_dir], check=True)
 
@@ -35,7 +37,7 @@ def manage_virtualenv():
         subprocess.run(complete_command, shell=True, check=True)
 
     # Installiere das Modul
-    
+
     project_root = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
     command = f"pip install -e {project_root}"
     run_in_venv(command)
