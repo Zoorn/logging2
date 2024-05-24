@@ -29,6 +29,32 @@ bub_logger = BubLogger()
 bub_logger.load_config('logging_console', log_level='DEBUG')
 ```
 
+### With Pyinstaller
+
+only way to use this package in an executable file is to add the configs with the --add-data argument
+for Pyinstaller. Haven't found another way.
+Here is an example for a vscode task in the task.json:
+
+```bash
+    {
+      "label": "Build",
+      "type": "shell",
+      "command": "${workspaceFolder}\\.venv\\Scripts\\python",
+      "args": [
+        "-m",
+        "PyInstaller",
+        "--noconfirm",
+        "--log-level=INFO",
+        "--onefile",
+        "--windowed",
+        "--workpath=.\\BuildTmp",
+        "--add-data='..\\.venv\\Lib\\site-packages\\bub_logger\\configs;.\\bub_logger\\configs'",
+        "--icon=..\\source\\images\\Prog.ico",
+        "..\\openhmi.py"
+      ],
+    }
+```
+
 ### Useable methods
 
 #### load_config
