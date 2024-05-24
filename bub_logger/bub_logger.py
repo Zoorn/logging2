@@ -89,9 +89,9 @@ class BubLogger:
         config_data = None
         for ext in ["json", "yaml", "yml"]:
             try:
-                config_file_path = pkg_resources.files("bub_logger.configs").joinpath(
-                    f"{config_file}.{ext}"
-                )
+                config_file_path = pkg_resources.files("bub_logger").joinpath(
+                        f"configs/{config_file}.{ext}"
+                    )
                 with config_file_path.open("r") as file:
                     config_data = file.read()
                     if ext == "json":

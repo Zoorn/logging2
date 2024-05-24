@@ -5,7 +5,7 @@ from unittest import mock
 
 import pytest
 
-from bub_logger.bub_logger import BubLogger
+from bub_logger import BubLogger
 
 
 @pytest.fixture(scope="session", autouse=True)
