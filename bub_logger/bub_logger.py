@@ -5,6 +5,7 @@ import logging
 import logging.config
 import os
 import sys
+import traceback
 from logging import FileHandler
 from logging.handlers import QueueHandler, QueueListener, RotatingFileHandler
 from queue import Queue
@@ -292,6 +293,17 @@ class BubLogger:
 
         if name not in self.loggers:
             self.loggers[name] = logging.getLogger(name)
+
+        def log_with_traceback(level, msg, *args, exc_info=None, **kwargs):
+            """ Log a message with an optional exception traceback."""
+            if exc_info:
+                lines = traceback.format_exception(*exc_info)
+                msg += "\n" + ("-" * 20) + "Traceback lines" + ("-" * 20) + "\n"
+                msg += "".join(lines)
+                msg += "\n" + ("-" * 20) + "End of Traceback" + ("-" * 20)
+            self.loggers[name].log(level, msg, *args, **kwargs)
+
+        self.loggers[name].log_with_traceback = log_with_traceback
 
         return self.loggers[name]
 
