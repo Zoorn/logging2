@@ -326,6 +326,13 @@ class BubLogger:
         sys.__excepthook__(exc_type, exc_value, exc_traceback)
         sys.exit(1)
 
+    def flush_queue(self):
+        """Flush the queue to ensure all messages are logged."""
+        while not self.queue.empty():
+            record = self.queue.get()
+            for handler in self.queue_listener.handlers:
+                handler.handle(record)
+
     def _stop(self):
         """Stop the queue listener."""
         if self.queue_listener:
