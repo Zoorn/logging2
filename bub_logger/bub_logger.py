@@ -1,18 +1,44 @@
 import atexit
-import importlib.resources as pkg_resources
 import json
 import logging
 import logging.config
 import os
 import sys
 import traceback
+from importlib.resources import files
 from logging import FileHandler
 from logging.handlers import QueueHandler, QueueListener, RotatingFileHandler
+from pathlib import Path
 from queue import Queue
 from typing import List
 
 import yaml
 
+
+class Config:
+    def __init__(self, name: str, version: int = 1, formatters: dict = {}, handlers: dict = {}, loggers: dict = {}):
+        self.name = name
+        self.version = 1
+        self.formatters = formatters if formatters is not None else {}
+        self.handlers = handlers if handlers is not None else {}
+        self.loggers = loggers if loggers is not None else {}
+
+    def to_dict(self):
+        return {
+            'version': self.version,
+            'formatters': self.formatters,
+            'handlers': self.handlers,
+            'loggers': self.loggers
+        }
+
+    def __str__(self):
+        return json.dumps(self.to_dict(), indent=4)
+
+    def __repr__(self):
+        return f"Config(name={self.name!r}, version={self.version!r}, formatters={self.formatters!r}, handlers={self.handlers!r}, loggers={self.loggers!r})"
+
+    def __eq__(self, other):
+        return self.name == other.name
 
 def update_docstring(docstring):
     """Decorator to update the docstring of a function."""
@@ -78,6 +104,27 @@ class BubLogger:
         for config in configs:
             self.load_config(*config)
 
+    def get_config_file(self, config_file: str) -> Path:
+        """Get the path of a configuration file by name."""
+        config_file_path = Path(config_file)
+        extension = config_file_path.suffix.lstrip(".").lower() if config_file_path.suffix else None
+
+        if extension and extension not in ["json", "yaml", "yml"]:
+            raise ValueError("Invalid configuration file extension. Allowed extensions: .json, .yaml, .yml")
+
+        # Prüfen und den Pfad setzen, wenn keine gültige Erweiterung vorhanden ist
+        if not extension:
+            for ext in ["json", "yaml", "yml"]:
+                config_file_with_ext = files("bub_logger").joinpath(f"configs/{config_file}.{ext}")
+                if config_file_with_ext.exists():
+                    return config_file_with_ext
+        else:
+            config_file_with_ext = files("bub_logger").joinpath(f"configs/{config_file}")
+            if config_file_with_ext.exists():
+                return config_file_with_ext
+
+        raise FileNotFoundError(f"Configuration file {config_file} not found.")
+
     def load_config(self, config_file, log_file_path=None, log_level="DEBUG", formatter=None):
         """Load logging configuration from a file (JSON or YAML) and set log file path if provided and log level.
 
@@ -92,22 +139,18 @@ class BubLogger:
             FileNotFoundError: If the specified configuration file is not found.
             ValueError: If the configuration file has an invalid format.
         """
+        config_file_path = self.get_config_file(config_file)
+        config_name = config_file_path.stem
+        ext = config_file_path.suffix[1:]
         # Find the configuration file with the correct extension
         config_data = None
-        for ext in ["json", "yaml", "yml"]:
-            try:
-                config_file_path = pkg_resources.files("bub_logger").joinpath(
-                        f"configs/{config_file}.{ext}"
-                    )
-                with config_file_path.open("r") as file:
-                    config_data = file.read()
-                    if ext == "json":
-                        config = json.loads(config_data)
-                    else:
-                        config = yaml.safe_load(config_data)
-                    break
-            except FileNotFoundError:
-                continue
+
+        with config_file_path.open("r") as file:
+            config_data = file.read()
+            if ext == "json":
+                config = json.loads(config_data)
+            else:
+                config = yaml.safe_load(config_data)
 
         if config_data is None:
             raise FileNotFoundError(f"Configuration file {config_file} not found.")
@@ -125,6 +168,7 @@ class BubLogger:
         for handler in config.get("handlers", {}).values():
             handler["level"] = logging.getLevelName(log_level)
 
+        config = Config(name=config_name, **config)
         # remove the config if it already exists to avoid duplicates and add the new config
         if config in self.configs:
             self.configs.remove(config)
@@ -147,6 +191,7 @@ class BubLogger:
 
         for config in configs:
             # add all formatters to the combined config
+            config = config.to_dict()
             for formatter_name, formatter_config in config.get(
                 "formatters", {}
             ).items():
@@ -255,33 +300,18 @@ class BubLogger:
         Raises:
             FileNotFoundError: If the specified configuration file is not found in the loaded configs.
         """
-        config_file_with_ext = None
-        for ext in [".json", ".yaml", ".yml"]:
-            if os.path.exists(config_file + ext):
-                config_file_with_ext = config_file + ext
-                break
+        config_file_with_ext = self.get_config_file(config_file)
 
         if not config_file_with_ext:
             raise FileNotFoundError(f"Config file {config_file} not found.")
 
+        config_name = config_file_with_ext.stem
+
         config_to_remove = None
         for config in self.configs:
-            if config_file_with_ext.endswith(".json"):
-                if (
-                    config.get("handlers", {}).get("file", {}).get("filename")
-                    == config_file_with_ext
-                ):
-                    config_to_remove = config
-                    break
-            elif config_file_with_ext.endswith(
-                ".yaml"
-            ) or config_file_with_ext.endswith(".yml"):
-                if (
-                    config.get("handlers", {}).get("yaml", {}).get("filename")
-                    == config_file_with_ext
-                ):
-                    config_to_remove = config
-                    break
+            if config.name == config_name:
+                config_to_remove = config
+                break
 
         if config_to_remove:
             self.configs.remove(config_to_remove)
