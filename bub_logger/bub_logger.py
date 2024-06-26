@@ -84,9 +84,17 @@ class BubLogger:
         return config_files
 
     def disable_console_logging(self):
+        if self.queue_listener is None:
+            return
+        handlers = tuple(handler for handler in self.queue_listener.handlers if not isinstance(handler, logging.StreamHandler))
+
+        self.queue_listener.stop()
+
         for handler in self.queue_listener.handlers:
             if isinstance(handler, logging.StreamHandler):
-                self.queue_listener.handlers.remove(handler)
+                handler.close()
+
+        self.queue_listener = QueueListener(self.queue, *handlers, respect_handler_level=True)
 
     def load_configs(
         self, configs: List[List[str]] = [["logging_console", None, "DEBUG", None]]
