@@ -96,7 +96,7 @@ class BubLogger:
             config = config.to_dict()
             for handler in config.get("handlers", {}).values():
                 if handler["class"] == "logging.StreamHandler":
-                    config["handlers"].remove(handler)
+                    del config["handlers"][handler]
         self.apply_configs()
 
     def load_configs(
