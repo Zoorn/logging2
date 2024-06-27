@@ -93,6 +93,7 @@ class BubLogger:
 
     def disable_console_logging(self):
         for config in self.configs:
+            config = config.to_dict()
             for handler in config.get("handlers", {}).values():
                 if handler["class"] == "logging.StreamHandler":
                     config["handlers"].remove(handler)
