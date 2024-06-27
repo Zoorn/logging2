@@ -109,6 +109,7 @@ class BubLogger:
         self.queue_listener = QueueListener(
             self.queue, *handlers, respect_handler_level=True
         )
+        self.queue_listener.start()
 
     def load_configs(
         self, configs: List[List[str]] = [["logging_console", None, "DEBUG", None]]
@@ -316,7 +317,8 @@ class BubLogger:
             handler_instances.append(handler_instance)
 
         if self.queue_listener:
-            self.queue_listener.stop()
+            if self.queue_listener is not None:
+                self.queue_listener.stop()
 
         self.queue_listener = QueueListener(
             self.queue, *handler_instances, respect_handler_level=True
