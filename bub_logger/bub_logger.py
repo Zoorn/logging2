@@ -16,19 +16,26 @@ import yaml
 
 
 class Config:
-    def __init__(self, name: str, version: int = 1, formatters: dict = {}, handlers: dict = {}, loggers: dict = {}):
+    def __init__(
+        self,
+        name: str,
+        version: int = 1,
+        formatters: dict = {},
+        handlers: dict = {},
+        loggers: dict = {},
+    ):
         self.name = name
-        self.version = 1
+        self.version = version
         self.formatters = formatters if formatters is not None else {}
         self.handlers = handlers if handlers is not None else {}
         self.loggers = loggers if loggers is not None else {}
 
     def to_dict(self):
         return {
-            'version': self.version,
-            'formatters': self.formatters,
-            'handlers': self.handlers,
-            'loggers': self.loggers
+            "version": self.version,
+            "formatters": self.formatters,
+            "handlers": self.handlers,
+            "loggers": self.loggers,
         }
 
     def __str__(self):
@@ -39,6 +46,7 @@ class Config:
 
     def __eq__(self, other):
         return self.name == other.name
+
 
 def update_docstring(docstring):
     """Decorator to update the docstring of a function."""
@@ -86,7 +94,11 @@ class BubLogger:
     def disable_console_logging(self):
         if self.queue_listener is None:
             return
-        handlers = tuple(handler for handler in self.queue_listener.handlers if not isinstance(handler, logging.StreamHandler))
+        handlers = tuple(
+            handler
+            for handler in self.queue_listener.handlers
+            if not isinstance(handler, logging.StreamHandler)
+        )
 
         self.queue_listener.stop()
 
@@ -94,7 +106,9 @@ class BubLogger:
             if isinstance(handler, logging.StreamHandler):
                 handler.close()
 
-        self.queue_listener = QueueListener(self.queue, *handlers, respect_handler_level=True)
+        self.queue_listener = QueueListener(
+            self.queue, *handlers, respect_handler_level=True
+        )
 
     def load_configs(
         self, configs: List[List[str]] = [["logging_console", None, "DEBUG", None]]
@@ -114,25 +128,37 @@ class BubLogger:
     def get_config_file(self, config_file: str) -> Path:
         """Get the path of a configuration file by name."""
         config_file_path = Path(config_file)
-        extension = config_file_path.suffix.lstrip(".").lower() if config_file_path.suffix else None
+        extension = (
+            config_file_path.suffix.lstrip(".").lower()
+            if config_file_path.suffix
+            else None
+        )
 
         if extension and extension not in ["json", "yaml", "yml"]:
-            raise ValueError("Invalid configuration file extension. Allowed extensions: .json, .yaml, .yml")
+            raise ValueError(
+                "Invalid configuration file extension. Allowed extensions: .json, .yaml, .yml"
+            )
 
         # Prüfen und den Pfad setzen, wenn keine gültige Erweiterung vorhanden ist
         if not extension:
             for ext in ["json", "yaml", "yml"]:
-                config_file_with_ext = files("bub_logger").joinpath(f"configs/{config_file}.{ext}")
+                config_file_with_ext = files("bub_logger").joinpath(
+                    f"configs/{config_file}.{ext}"
+                )
                 if config_file_with_ext.exists():
                     return config_file_with_ext
         else:
-            config_file_with_ext = files("bub_logger").joinpath(f"configs/{config_file}")
+            config_file_with_ext = files("bub_logger").joinpath(
+                f"configs/{config_file}"
+            )
             if config_file_with_ext.exists():
                 return config_file_with_ext
 
         raise FileNotFoundError(f"Configuration file {config_file} not found.")
 
-    def load_config(self, config_file, log_file_path=None, log_level="DEBUG", formatter=None):
+    def load_config(
+        self, config_file, log_file_path=None, log_level="DEBUG", formatter=None
+    ):
         """Load logging configuration from a file (JSON or YAML) and set log file path if provided and log level.
 
         Available configuration files:
@@ -263,8 +289,10 @@ class BubLogger:
             elif handler_class_name == "FileHandler":
                 handler_class = FileHandler
             else:
-                raise ValueError(f"Unknown handler class: {
-                                 handler_class_name}")
+                raise ValueError(
+                    f"Unknown handler class: { \
+                                 handler_class_name}"
+                )
 
             handler_instance = handler_class(
                 **{
@@ -338,7 +366,7 @@ class BubLogger:
             self.loggers[name] = logging.getLogger(name)
 
         def log_with_traceback(level, msg, *args, exc_info=None, **kwargs):
-            """ Log a message with an optional exception traceback."""
+            """Log a message with an optional exception traceback."""
             if exc_info:
                 lines = traceback.format_exception(*exc_info)
                 msg += "\n" + ("-" * 20) + "Traceback lines" + ("-" * 20) + "\n"
@@ -360,11 +388,9 @@ class BubLogger:
             # Allow KeyboardInterrupt to exit silently
             sys.__excepthook__(exc_type, exc_value, exc_traceback)
             return
-        logger.critical(
-            "---------------------Traceback lines-----------------------")
+        logger.critical("---------------------Traceback lines-----------------------")
         logger.critical("\n".join(lines))
-        logger.critical(
-            "---------------------End of Traceback-----------------------")
+        logger.critical("---------------------End of Traceback-----------------------")
 
         sys.__excepthook__(exc_type, exc_value, exc_traceback)
         sys.exit(1)
