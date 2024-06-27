@@ -94,18 +94,23 @@ class BubLogger:
     def disable_console_logging(self):
         if self.queue_listener is None:
             return
+
+        # Collect non-StreamHandlers
         handlers = tuple(
             handler
             for handler in self.queue_listener.handlers
             if not isinstance(handler, logging.StreamHandler)
         )
 
+        # Stop the listener
         self.queue_listener.stop()
 
+        # Close all StreamHandlers
         for handler in self.queue_listener.handlers:
             if isinstance(handler, logging.StreamHandler):
                 handler.close()
 
+        # Create and start a new listener with non-StreamHandlers
         self.queue_listener = QueueListener(
             self.queue, *handlers, respect_handler_level=True
         )
