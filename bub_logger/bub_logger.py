@@ -6,16 +6,19 @@ import os
 import sys
 import traceback
 from importlib.resources import files
+from importlib.resources.abc import Traversable
 from logging import FileHandler
 from logging.handlers import QueueHandler, QueueListener, RotatingFileHandler
 from pathlib import Path
 from queue import Queue
-from typing import List
+from typing import Dict, List
 
 import yaml
 
 
 class Config:
+    """Class to represent a logging configuration."""
+
     def __init__(
         self,
         name: str,
@@ -24,9 +27,9 @@ class Config:
         handlers: dict = {},
         loggers: dict = {},
     ):
-        self.name = name
-        self.version = version
-        self.formatters = formatters if formatters is not None else {}
+        self.name: str = name
+        self.version: int = version
+        self.formatters: Dict[str, str] = formatters if formatters is not None else {}
         self.handlers = handlers if handlers is not None else {}
         self.loggers = loggers if loggers is not None else {}
 
@@ -60,6 +63,7 @@ def update_docstring(docstring):
 
 class BubLogger:
     def __init__(self):
+        """Initialize the BubLogger class."""
         self.loggers = {}
         # check if the logger is configured, otherwise don't return any loggers
         self.configured = False
@@ -105,7 +109,8 @@ class BubLogger:
         self.apply_configs()
 
     def load_configs(
-        self, configs: List[List[str]] = [["logging_console", None, "DEBUG", None]]
+        self,
+        configs: List[List[str | None]] = [["logging_console", None, "DEBUG", None]],
     ):
         """Load multiple logging configurations from a list of configurations.
 
@@ -119,7 +124,7 @@ class BubLogger:
         for config in configs:
             self.load_config(*config)
 
-    def get_config_file(self, config_file: str) -> Path:
+    def get_config_file(self, config_file: str) -> Traversable:
         """Get the path of a configuration file by name."""
         config_file_path = Path(config_file)
         extension = (
@@ -139,14 +144,20 @@ class BubLogger:
                 config_file_with_ext = files("bub_logger").joinpath(
                     f"configs/{config_file}.{ext}"
                 )
-                if config_file_with_ext.exists():
-                    return config_file_with_ext
+                try:
+                    with config_file_with_ext.open("r"):
+                        return config_file_with_ext
+                except FileNotFoundError:
+                    continue
         else:
             config_file_with_ext = files("bub_logger").joinpath(
                 f"configs/{config_file}"
             )
-            if config_file_with_ext.exists():
-                return config_file_with_ext
+            try:
+                with config_file_with_ext.open("r"):
+                    return config_file_with_ext
+            except FileNotFoundError:
+                pass
 
         raise FileNotFoundError(f"Configuration file {config_file} not found.")
 
